@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+<title>Щоденний пробіг</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<style>
+  :root {
+    --bg: #eef2f7; --card: #ffffff; --ink: #18212c; --muted: #5d6876; --line: #e3e8ef;
+    --blue: #2c6cc4; --blue-dark: #2459a3; --blue-soft: #e6eefa;
+    --ok: #1f8a4c; --ok-soft: #e3f4ea; --warn: #b26a00; --warn-soft: #fdf1dc; --bad: #c0392b; --bad-soft: #fbe7e5;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; padding: 0; background: var(--bg); color: var(--ink);
+    font: 16px/1.35 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; }
+  .wrap { max-width: 460px; margin: 0 auto; padding: 14px 16px 28px; }
+  .hidden { display: none !important; }
+
+  /* шапка з авто */
+  .top { display: flex; align-items: center; gap: 12px; background: var(--card); border-radius: 18px; padding: 12px 14px;
+    box-shadow: 0 1px 2px rgba(20,40,70,.06); position: relative; }
+  .car-ico { width: 46px; height: 46px; border-radius: 12px; background: var(--blue-soft); display: grid; place-items: center; flex: none; }
+  .car-ico svg { width: 30px; height: 30px; color: var(--blue); }
+  .car-txt { flex: 1; min-width: 0; }
+  .plate { font-size: 21px; font-weight: 700; letter-spacing: .3px; display: flex; align-items: center; gap: 6px; }
+  .plate .chev { width: 18px; height: 18px; color: var(--muted); }
+  .model { font-size: 14px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .car-select { position: absolute; inset: 0; opacity: 0; width: 100%; height: 100%; font-size: 16px; }
+  .avatar { width: 40px; height: 40px; border-radius: 50%; background: #dbe6f6; color: var(--blue-dark); font-weight: 700;
+    display: grid; place-items: center; font-size: 15px; flex: none; }
+
+  h1 { font-size: 22px; margin: 20px 2px 2px; font-weight: 700; }
+  .sub { color: var(--muted); font-size: 15px; margin: 0 2px 12px; }
+
+  /* картки */
+  .card { background: var(--card); border-radius: 16px; padding: 12px 14px 12px; margin-bottom: 10px;
+    box-shadow: 0 1px 2px rgba(20,40,70,.06); border: 2px solid transparent; transition: border-color .15s; cursor: text; }
+  .card.focus { border-color: #b9cff0; }
+  .card-head { display: flex; align-items: center; gap: 8px; font-size: 16px; }
+  .card-head svg { width: 26px; height: 26px; color: var(--blue); flex: none; }
+  .num { display: flex; align-items: baseline; justify-content: center; gap: 6px; margin-top: 4px; }
+  .num input { width: 3ch; max-width: 100%; border: 0; outline: 0; background: transparent; text-align: center; color: var(--ink);
+    font-family: inherit; font-weight: 700; font-size: 32px; line-height: 1.2; padding: 2px 0; min-width: 0; }
+  .num input::placeholder { color: #c3cad4; font-weight: 600; }
+  .num .unit { font-size: 26px; font-weight: 700; color: var(--ink); flex: none; }
+  .num.small { justify-content: flex-end; }
+  .num.small input { text-align: right; font-size: 24px; }
+  .num.small .unit { font-size: 22px; }
+  .row-personal { display: flex; align-items: center; justify-content: space-between; margin-top: 2px; }
+  .row-personal svg { width: 26px; height: 26px; color: var(--blue); }
+  .note { text-align: center; font-size: 13.5px; color: var(--muted); margin-top: 2px; min-height: 0; }
+  .note.ok { color: var(--ok); } .note.warn { color: var(--warn); } .note.bad { color: var(--bad); }
+  .saved { text-align: center; margin-top: 4px; }
+  .saved .v { font-size: 32px; font-weight: 700; }
+  .saved .meta { font-size: 13.5px; color: var(--ok); display: flex; justify-content: center; gap: 10px; align-items: center; }
+  .link { color: var(--blue); background: none; border: 0; font: inherit; font-size: 13.5px; padding: 0; text-decoration: underline; cursor: pointer; }
+  .daykm { text-align: center; font-size: 14px; color: var(--muted); margin: 2px 0 10px; }
+  .daykm b { color: var(--ink); }
+
+  .err { background: var(--bad-soft); color: var(--bad); border-radius: 12px; padding: 10px 12px; font-size: 14.5px; margin: 6px 0 10px; }
+  .btn { display: block; width: 100%; border: 0; border-radius: 14px; padding: 16px 12px; font-family: inherit; font-weight: 700; font-size: 16px; line-height: 1;
+    letter-spacing: .4px; text-transform: uppercase; background: var(--blue); color: #fff; cursor: pointer; margin-top: 6px;
+    box-shadow: 0 2px 6px rgba(44,108,196,.25); }
+  .btn:active { background: var(--blue-dark); }
+  .btn:disabled { background: #a9bcd8; box-shadow: none; }
+  .btn.ghost { background: transparent; color: var(--blue); box-shadow: none; text-transform: none; letter-spacing: 0; font-weight: 600; }
+  .hint { font-size: 13px; color: var(--muted); text-align: center; margin-top: 10px; }
+
+  /* стани */
+  .center { min-height: 70vh; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 20px; }
+  .spinner { width: 38px; height: 38px; border-radius: 50%; border: 4px solid #d5e0ef; border-top-color: var(--blue); animation: spin .8s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .big-ico { width: 72px; height: 72px; border-radius: 50%; display: grid; place-items: center; margin-bottom: 14px; }
+  .big-ico svg { width: 38px; height: 38px; }
+  .big-ico.ok { background: var(--ok-soft); color: var(--ok); }
+  .big-ico.bad { background: var(--bad-soft); color: var(--bad); }
+  .center h2 { margin: 0 0 8px; font-size: 21px; }
+  .center p { margin: 0 0 6px; color: var(--muted); }
+  .summary { background: var(--card); border-radius: 14px; padding: 12px 16px; margin: 10px 0 16px; text-align: left; width: 100%; max-width: 360px; }
+  .summary div { padding: 4px 0; }
+
+  /* підтвердження */
+  .sheet-bg { position: fixed; inset: 0; background: rgba(15,25,40,.45); display: flex; align-items: flex-end; justify-content: center; z-index: 10; }
+  .sheet { background: var(--card); width: 100%; max-width: 460px; border-radius: 20px 20px 0 0; padding: 18px 16px 22px; }
+  .sheet h3 { margin: 0 0 8px; font-size: 19px; }
+  .sheet .w { background: var(--warn-soft); color: #7a4a00; border-radius: 12px; padding: 10px 12px; margin: 8px 0; font-size: 15px; }
+  .demo { background: var(--warn-soft); color: #7a4a00; border-radius: 10px; padding: 8px 12px; font-size: 13.5px; margin-bottom: 10px; text-align: center; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div id="loading" class="center"><div class="spinner"></div><p style="margin-top:14px">Завантаження…</p></div>
+
+  <div id="error" class="center hidden">
+    <div class="big-ico bad"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 7.5v5.5M12 16.5v.01"/></svg></div>
+    <h2>Не вдалося відкрити</h2>
+    <p id="errorText"></p>
+  </div>
+
+  <div id="done" class="center hidden">
+    <div class="big-ico ok"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></div>
+    <h2>Дані збережено</h2>
+    <div class="summary" id="doneList"></div>
+    <button class="btn" id="closeBtn">Готово</button>
+    <button class="btn ghost" id="againBtn">Внести ще</button>
+    <p class="hint" id="closeHint"></p>
+  </div>
+
+  <div id="main" class="hidden">
+    <div id="demoNote" class="demo hidden">Демо-режим: дані не зберігаються.</div>
+    <div class="top">
+      <div class="car-ico"><svg viewBox="0 0 32 32" fill="currentColor"><path d="M6.2 13.4l2.1-4.7A3 3 0 0 1 11 7h10a3 3 0 0 1 2.7 1.7l2.1 4.7A3.2 3.2 0 0 1 28 16.5V21a1.5 1.5 0 0 1-1.5 1.5H26a3 3 0 0 1-6 0h-8a3 3 0 0 1-6 0h-.5A1.5 1.5 0 0 1 4 21v-4.5a3.2 3.2 0 0 1 2.2-3.1zM9.9 9.6L8.4 13h15.2l-1.5-3.4A1 1 0 0 0 21 9H11a1 1 0 0 0-1.1.6zM9 18.2a1.3 1.3 0 1 0 0 2.6 1.3 1.3 0 0 0 0-2.6zm14 0a1.3 1.3 0 1 0 0 2.6 1.3 1.3 0 0 0 0-2.6z"/></svg></div>
+      <div class="car-txt">
+        <div class="plate"><span id="plate"></span><svg id="chev" class="chev hidden" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M7 10l5 5 5-5"/></svg></div>
+        <div class="model" id="model"></div>
+      </div>
+      <div class="avatar" id="avatar"></div>
+      <select id="carSelect" class="car-select hidden" aria-label="Оберіть авто"></select>
+    </div>
+
+    <h1>Щоденний пробіг</h1>
+    <div class="sub" id="today"></div>
+
+    <div class="card" id="cardM">
+      <div class="card-head"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M4 17h16M7 17a5 5 0 0 1 10 0M12 6.5V8.5M5.6 9.6l1.4 1.4M18.4 9.6L17 11M3 20h18"/></svg>Показник одометра «Ранок»</div>
+      <div id="savedM" class="saved hidden"><div class="v" id="savedMv"></div><div class="meta"><span id="savedMat"></span><button class="link" data-edit="M">виправити</button></div></div>
+      <div class="num" id="boxM"><input id="inM" inputmode="numeric" pattern="[0-9]*" autocomplete="off" placeholder="—"><span class="unit">км</span></div>
+      <div class="note" id="noteM"></div>
+    </div>
+
+    <div class="card" id="cardE">
+      <div class="card-head"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M19.5 14.6A8 8 0 0 1 9.4 4.5a8 8 0 1 0 10.1 10.1z"/><path d="M16 4h3l-3 3.5h3"/></svg>Показник одометра «Вечір»</div>
+      <div id="savedE" class="saved hidden"><div class="v" id="savedEv"></div><div class="meta"><span id="savedEat"></span><button class="link" data-edit="E">виправити</button></div></div>
+      <div class="num" id="boxE"><input id="inE" inputmode="numeric" pattern="[0-9]*" autocomplete="off" placeholder="—"><span class="unit">км</span></div>
+      <div class="note" id="noteE"></div>
+    </div>
+    <div class="daykm hidden" id="dayKm"></div>
+
+    <div class="card" id="cardP">
+      <div class="card-head"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="4.5" r="1.8"/><path d="M6.5 9.5c2-.8 3.8-1.2 5.5-1.2s3.5.4 5.5 1.2M12 8.5v5.5l-3 6.5M12 14l3 6.5"/></svg>Особистий пробіг</div>
+      <div class="row-personal">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M5 11l1.6-3.6A2 2 0 0 1 8.4 6h7.2a2 2 0 0 1 1.8 1.4L19 11"/><rect x="3.5" y="11" width="17" height="6" rx="2"/><path d="M6.5 17v2M17.5 17v2"/><circle cx="7.5" cy="14" r=".9" fill="currentColor"/><circle cx="16.5" cy="14" r=".9" fill="currentColor"/></svg>
+        <div class="num small"><input id="inP" inputmode="numeric" pattern="[0-9]*" autocomplete="off" placeholder="0"><span class="unit">км</span></div>
+      </div>
+      <div class="note" id="noteP"></div>
+    </div>
+
+    <div class="err hidden" id="formErr"></div>
+    <button class="btn" id="sendBtn" disabled>Відправити дані</button>
+    <p class="hint" id="lastHint"></p>
+  </div>
+</div>
+
+<div class="sheet-bg hidden" id="sheet">
+  <div class="sheet">
+    <h3>Перевірте показник</h3>
+    <div id="sheetList"></div>
+    <p style="color:var(--muted);font-size:14.5px;margin:6px 0 12px">Звірте з панеллю приладів.</p>
+    <button class="btn" id="sheetYes">Так, показник вірний</button>
+    <button class="btn ghost" id="sheetNo">Виправити</button>
+  </div>
+</div>
+
+<script>
+  // Сервер: вебзастосунок Google Apps Script «Пробіг — міні-додаток Telegram» (doPost)
+  var API_URL = 'https://script.google.com/macros/s/AKfycbyScuvuCsceKh4AGU6mf1Kncmn7mLlql3J8WLVyak5bY1M0ZIES-N03nz4MeTvrfJmq/exec';
+  var initData = '', state = null, car = null, edit = { M: false, E: false }, demo = false, busy = false;
+  var $ = function (id) { return document.getElementById(id); };
+  var MONTHS = ['січня','лютого','березня','квітня','травня','червня','липня','серпня','вересня','жовтня','листопада','грудня'];
+  var tg = (window.Telegram && window.Telegram.WebApp) || null;
+  try { tg && tg.ready(); tg && tg.expand(); tg && tg.setHeaderColor('#eef2f7'); tg && tg.setBackgroundColor('#eef2f7'); } catch (e) {}
+
+  function api(action, extra) {
+    var body = { action: action, initData: initData };
+    for (var k in extra || {}) body[k] = extra[k];
+    return fetch(API_URL, { method: 'POST', body: JSON.stringify(body) }).then(function (r) {
+      if (!r.ok) throw new Error('Сервер не відповідає (' + r.status + '). Спробуйте ще раз.');
+      return r.json();
+    });
+  }
+
+  function fmt(n) { return String(n).replace(/\B(?=(\d{3})+(?!\d))/g, ' '); }
+  function val(id) { var s = $(id).value.replace(/\D/g, ''); return s === '' ? null : parseInt(s, 10); }
+  function show(id) { ['loading', 'error', 'done', 'main'].forEach(function (x) { $(x).classList.toggle('hidden', x !== id); }); }
+  function fail(msg) { $('errorText').textContent = String(msg || 'Невідома помилка').replace(/^(Error|Exception):\s*/i, '').replace(/^[A-Z_]+:\s*/, ''); show('error'); }
+
+  function start() {
+    initData = (tg && tg.initData) || '';
+    if (!initData) {
+      if (/[?&]demo=1/.test(location.search)) { demo = true; onState(DEMO); return; }
+      fail('Відкрийте міні-додаток кнопкою «Пробіг» у Telegram-боті.');
+      return;
+    }
+    load();
+  }
+
+  function load() {
+    show('loading');
+    api('state').then(onState).catch(function (e) { fail(e && e.message); });
+  }
+
+  function onState(s) {
+    if (s && s.error) { fail(s.error); return; }
+    state = s;
+    $('demoNote').classList.toggle('hidden', !demo);
+    var parts = String(s.name || '').split(/\s+/);
+    $('avatar').textContent = ((parts[1] || '').charAt(0) + (parts[0] || '').charAt(0)).toUpperCase() || '?';
+    var d = new Date();
+    $('today').textContent = 'Сьогодні: ' + d.getDate() + ' ' + MONTHS[d.getMonth()] + ' ' + d.getFullYear();
+    var sel = $('carSelect');
+    sel.innerHTML = '';
+    if (s.cars.length > 1) {
+      var groups = {};
+      s.cars.forEach(function (c) {
+        var parent = sel;
+        if (s.grouped) {
+          if (!groups[c.city]) { groups[c.city] = document.createElement('optgroup'); groups[c.city].label = c.city; sel.appendChild(groups[c.city]); }
+          parent = groups[c.city];
+        }
+        var o = document.createElement('option');
+        o.value = c.plate; o.textContent = c.plate + (c.model ? ' — ' + c.model : '');
+        parent.appendChild(o);
+      });
+      sel.classList.remove('hidden'); $('chev').classList.remove('hidden');
+    } else { sel.classList.add('hidden'); $('chev').classList.add('hidden'); }
+    pickCar(s.current);
+    show('main');
+  }
+
+  function pickCar(plate) {
+    car = state.cars.filter(function (c) { return c.plate === plate; })[0] || state.cars[0];
+    $('carSelect').value = car.plate;
+    $('plate').textContent = car.plate;
+    $('model').textContent = car.model || car.city || '';
+    edit = { M: false, E: false };
+    ['inM', 'inE', 'inP'].forEach(function (id) { $(id).value = ''; });
+    $('lastHint').textContent = car.last ? 'Останній показник по авто: ' + fmt(car.last.value) + ' км (' + car.last.at + ')' : '';
+    render();
+  }
+
+  function saved(f) { return !edit[f] && car.today && car.today[f] ? car.today[f] : null; }
+
+  function render() {
+    ['M', 'E'].forEach(function (f) {
+      var sv = saved(f);
+      $('saved' + f).classList.toggle('hidden', !sv);
+      $('box' + f).classList.toggle('hidden', !!sv);
+      if (sv) { $('saved' + f + 'v').textContent = fmt(sv.value) + ' км'; $('saved' + f + 'at').textContent = '✓ внесено о ' + sv.at; }
+    });
+    var t = car.today || {};
+    var savedP = (t.E && t.E.personal != null) ? t.E.personal : (t.M && t.M.personal != null ? t.M.personal : null);
+    $('inP').placeholder = savedP != null ? fmt(savedP) : '0';
+    fitAll();
+    check();
+  }
+
+  // Живі перевірки і текст кнопки
+  function check() {
+    var t = car.today || {};
+    var m = edit.M || !t.M ? val('inM') : null, e = edit.E || !t.E ? val('inE') : null, p = val('inP');
+    var mAll = m != null ? m : (t.M && !edit.M ? t.M.value : null);
+    var eAll = e != null ? e : (t.E && !edit.E ? t.E.value : null);
+    var bad = '';
+    note('M', '', ''); note('E', '', ''); note('P', '', '');
+    var last = car.last ? car.last.value : null;
+    if (m != null && last != null && !(t.M && edit.M)) {
+      if (m < last) note('M', 'warn', 'Менше за останній показник (' + fmt(last) + ' км)');
+      else if (m - last > state.maxJump) note('M', 'warn', 'На ' + fmt(m - last) + ' км більше за останній показник');
+    }
+    if (e != null) {
+      if (mAll != null && e < mAll) { note('E', 'bad', 'Менше за ранковий показник'); bad = 'Вечірній показник менший за ранковий.'; }
+      else if (mAll == null && last != null && e < last) note('E', 'warn', 'Менше за останній показник (' + fmt(last) + ' км)');
+      else if (mAll != null && e - mAll > state.maxJump) note('E', 'warn', 'За день ' + fmt(e - mAll) + ' км — перевірте');
+    }
+    if (mAll != null && eAll != null && eAll >= mAll) { $('dayKm').innerHTML = 'Пробіг за день: <b>' + fmt(eAll - mAll) + ' км</b>'; $('dayKm').classList.remove('hidden'); }
+    else $('dayKm').classList.add('hidden');
+    if (p != null) {
+      if (p > state.maxJump) { note('P', 'bad', 'Забагато: максимум ' + fmt(state.maxJump) + ' км'); bad = bad || 'Перевірте особистий пробіг.'; }
+      else if (mAll != null && eAll != null && p > eAll - mAll) { note('P', 'bad', 'Більше за пробіг за день (' + fmt(eAll - mAll) + ' км)'); bad = bad || 'Особистий пробіг більший за пробіг за день.'; }
+    }
+    var any = m != null || e != null || p != null;
+    var btn = $('sendBtn');
+    btn.disabled = !any || !!bad || busy;
+    var label = 'Відправити дані';
+    if (m != null || e != null) {
+      if (mAll != null && eAll == null) label = 'Підтвердити: лише ранок';
+      else if (eAll != null && mAll == null) label = 'Підтвердити: лише вечір';
+    }
+    btn.textContent = busy ? 'Збереження…' : label;
+    $('formErr').classList.add('hidden');
+  }
+
+  function fit(el) { var n = (el.value || el.placeholder || '').length; el.style.width = Math.max(n, 1) * 0.58 + 0.3 + 'em'; }
+  function fitAll() { ['inM', 'inE', 'inP'].forEach(function (id) { fit($(id)); }); }
+
+  function note(f, cls, text) { var n = $('note' + f); n.className = 'note' + (cls ? ' ' + cls : ''); n.textContent = text; }
+
+  function submit(confirm) {
+    var t = car.today || {};
+    var payload = {
+      car: car.plate,
+      m: edit.M || !t.M ? $('inM').value : '',
+      e: edit.E || !t.E ? $('inE').value : '',
+      personal: $('inP').value,
+      confirm: !!confirm
+    };
+    if (demo) { done(['Демо: ' + [payload.m && 'ранок ' + payload.m, payload.e && 'вечір ' + payload.e, payload.personal && 'особистий ' + payload.personal].filter(Boolean).join(', ')]); return; }
+    busy = true; check();
+    api('submit', { payload: payload })
+      .then(function (r) {
+        busy = false; check();
+        if (r.error) { showErr(r.error); return; }
+        if (r.warnings) { openSheet(r.warnings); return; }
+        done(r.saved);
+      })
+      .catch(function (e) { busy = false; check(); showErr(String(e && e.message || e)); });
+  }
+
+  function showErr(msg) { var x = $('formErr'); x.textContent = msg; x.classList.remove('hidden'); }
+
+  function openSheet(list) {
+    $('sheetList').innerHTML = '';
+    list.forEach(function (w) { var d = document.createElement('div'); d.className = 'w'; d.textContent = '\u26a0\ufe0f ' + w; $('sheetList').appendChild(d); });
+    $('sheet').classList.remove('hidden');
+  }
+
+  function done(lines) {
+    $('doneList').innerHTML = '<div><b>' + car.plate + '</b></div>' + lines.map(function (l) { return '<div>' + l.replace(/</g, '&lt;') + '</div>'; }).join('');
+    $('closeHint').textContent = '';
+    show('done');
+    try { tg && tg.HapticFeedback && tg.HapticFeedback.notificationOccurred('success'); } catch (e) {}
+  }
+
+  // події
+  ['inM', 'inE', 'inP'].forEach(function (id) {
+    var el = $(id), card = el.closest('.card');
+    el.addEventListener('input', function () {
+      var digits = el.value.replace(/\D/g, '').slice(0, 7);
+      el.value = digits ? fmt(parseInt(digits, 10)) : '';
+      fit(el);
+      check();
+    });
+    el.addEventListener('focus', function () { card.classList.add('focus'); });
+    el.addEventListener('blur', function () { card.classList.remove('focus'); });
+  });
+  // Натискання будь-де на картці ставить курсор у поле
+  ['M', 'E', 'P'].forEach(function (f) {
+    $('card' + f).addEventListener('click', function (ev) {
+      if (ev.target.closest('button') || ev.target.tagName === 'INPUT') return;
+      var inp = $('in' + f);
+      if (inp.offsetParent) inp.focus();
+    });
+  });
+  document.querySelectorAll('[data-edit]').forEach(function (b) {
+    b.addEventListener('click', function () { var f = b.getAttribute('data-edit'); edit[f] = true; render(); $('in' + f).focus(); });
+  });
+  $('carSelect').addEventListener('change', function () { pickCar(this.value); });
+  $('sendBtn').addEventListener('click', function () { submit(false); });
+  $('sheetYes').addEventListener('click', function () { $('sheet').classList.add('hidden'); submit(true); });
+  $('sheetNo').addEventListener('click', function () { $('sheet').classList.add('hidden'); });
+  $('againBtn').addEventListener('click', function () { if (demo) { show('main'); return; } load(); });
+  $('closeBtn').addEventListener('click', function () {
+    try { if (tg && tg.initData) { tg.close(); return; } } catch (e) {}
+    $('closeHint').textContent = 'Можна закрити це вікно.';
+  });
+
+  var DEMO = {
+    name: 'Іванов Петро', branch: 'Дніпро', grouped: false, current: 'КА9146ВМ', maxJump: 3000,
+    cars: [
+      { plate: 'КА9146ВМ', city: 'Дніпро', model: 'Opel Combo', today: { M: { value: 221298, at: '08:12', personal: null } }, last: { value: 221298, at: '26.11 08:12' } },
+      { plate: 'КА2652МН', city: 'Дніпро', model: 'Opel Combo', today: {}, last: { value: 102968, at: '25.11 18:40' } }
+    ]
+  };
+
+  start();
+</script>
+</body>
+</html>
