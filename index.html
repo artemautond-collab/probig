@@ -271,7 +271,7 @@
       if (m < last) note('M', 'warn', 'Менше за останній показник (' + fmt(last) + ' км)');
       else if (m - last > state.maxJump) note('M', 'warn', 'На ' + fmt(m - last) + ' км більше за останній показник');
     }
-    if (m != null && morningAuto() && m === car.fromEvening.value) note('M', '', 'Взято з вечора ' + car.fromEvening.at);
+    if (m != null && morningAuto() && m === car.fromEvening.value) note('M', '', 'Взято з ' + (car.fromEvening.src === 'last' ? 'останнього показника ' : 'вечора ') + car.fromEvening.at);
     if (e != null) {
       if (mAll != null && e < mAll) { note('E', 'bad', 'Менше за ранковий показник'); bad = 'Вечірній показник менший за ранковий.'; }
       else if (mAll == null && last != null && e < last) note('E', 'warn', 'Менше за останній показник (' + fmt(last) + ' км)');
