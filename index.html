@@ -239,7 +239,8 @@
     render();
   }
 
-  function saved(f) { return !edit[f] && car.today && car.today[f] ? car.today[f] : null; }
+  // Внесене раніше сьогодні на екрані не показуємо: поля завжди порожні, значення лише для перевірок
+  function saved(f) { return null; }
 
   function render() {
     ['M', 'E'].forEach(function (f) {
@@ -248,9 +249,7 @@
       $('box' + f).classList.toggle('hidden', !!sv);
       if (sv) { $('saved' + f + 'v').textContent = fmt(sv.value) + ' км'; $('saved' + f + 'at').textContent = '✓ внесено о ' + sv.at; }
     });
-    var t = car.today || {};
-    var savedP = (t.E && t.E.personal != null) ? t.E.personal : (t.M && t.M.personal != null ? t.M.personal : null);
-    $('inP').placeholder = savedP != null ? fmt(savedP) : '0';
+    $('inP').placeholder = '0';
     fitAll();
     check();
   }
@@ -258,13 +257,13 @@
   // Живі перевірки і текст кнопки
   function check() {
     var t = car.today || {};
-    var m = edit.M || !t.M ? val('inM') : null, e = edit.E || !t.E ? val('inE') : null, p = val('inP');
-    var mAll = m != null ? m : (t.M && !edit.M ? t.M.value : null);
-    var eAll = e != null ? e : (t.E && !edit.E ? t.E.value : null);
+    var m = val('inM'), e = val('inE'), p = val('inP');
+    var mAll = m != null ? m : (t.M ? t.M.value : null);   // для перевірок беремо й внесене раніше сьогодні
+    var eAll = e != null ? e : (t.E ? t.E.value : null);
     var bad = '';
     note('M', '', ''); note('E', '', ''); note('P', '', '');
     var last = car.last ? car.last.value : null;
-    if (m != null && last != null && !(t.M && edit.M)) {
+    if (m != null && last != null) {
       if (m < last) note('M', 'warn', 'Менше за останній показник (' + fmt(last) + ' км)');
       else if (m - last > state.maxJump) note('M', 'warn', 'На ' + fmt(m - last) + ' км більше за останній показник');
     }
@@ -273,7 +272,7 @@
       else if (mAll == null && last != null && e < last) note('E', 'warn', 'Менше за останній показник (' + fmt(last) + ' км)');
       else if (mAll != null && e - mAll > state.maxJump) note('E', 'warn', 'За день ' + fmt(e - mAll) + ' км — перевірте');
     }
-    if (mAll != null && eAll != null && eAll >= mAll) { $('dayKm').innerHTML = 'Пробіг за день: <b>' + fmt(eAll - mAll) + ' км</b>'; $('dayKm').classList.remove('hidden'); }
+    if (m != null && e != null && e >= m) { $('dayKm').innerHTML = 'Пробіг за день: <b>' + fmt(eAll - mAll) + ' км</b>'; $('dayKm').classList.remove('hidden'); }
     else $('dayKm').classList.add('hidden');
     if (p != null) {
       if (p > state.maxJump) { note('P', 'bad', 'Забагато: максимум ' + fmt(state.maxJump) + ' км'); bad = bad || 'Перевірте особистий пробіг.'; }
@@ -283,10 +282,8 @@
     var btn = $('sendBtn');
     btn.disabled = !any || !!bad || busy;
     var label = 'Відправити дані';
-    if (m != null || e != null) {
-      if (mAll != null && eAll == null) label = 'Підтвердити: лише ранок';
-      else if (eAll != null && mAll == null) label = 'Підтвердити: лише вечір';
-    }
+    if (m != null && e == null) label = 'Підтвердити: лише ранок';
+    else if (e != null && m == null) label = 'Підтвердити: лише вечір';
     btn.textContent = busy ? 'Збереження…' : label;
     $('formErr').classList.add('hidden');
   }
@@ -297,11 +294,10 @@
   function note(f, cls, text) { var n = $('note' + f); n.className = 'note' + (cls ? ' ' + cls : ''); n.textContent = text; }
 
   function submit(confirm) {
-    var t = car.today || {};
     var payload = {
       car: car.plate,
-      m: edit.M || !t.M ? $('inM').value : '',
-      e: edit.E || !t.E ? $('inE').value : '',
+      m: $('inM').value,
+      e: $('inE').value,
       personal: $('inP').value,
       confirm: !!confirm
     };
